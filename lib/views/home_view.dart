@@ -4,7 +4,7 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Opciones")),
+      appBar: AppBar(title: Text("Menu")),
       body: Column(
         children: [
           Expanded(

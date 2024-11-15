@@ -85,11 +85,11 @@ class ApiService {
   }
 
   // Método para asignar boleta a un banco
-  Future<void> asignarBoleta(String boletaId, String bancoId) async {
+  Future<void> asignarBoleta(Map<String, dynamic> bancoData) async {
     final response = await http.post(
       Uri.parse('${Constants.baseUrl}/asignar_boleta'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'boleta_id': boletaId, 'banco_id': bancoId}),
+      body: jsonEncode(bancoData),
     );
 
     if (response.statusCode != 200) {

@@ -38,18 +38,35 @@ class _BoletasLibresViewState extends State<BoletasLibresView> {
     String? selectedBank;
     final bancos = ["BCP", "Interbank", "BBVA"];
 
+    double? tasaCompensatoria;
+    String? tipoTasa;
+    int? diasTasa;
+    int? capitalizacion;
+
+    final diasTasaItems = {
+      30: 'Mensual',
+      90: 'Trimestral',
+      180: 'Semestral',
+      365: 'Anual'
+    };
+
     await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text("Asignar Factura a Banco"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButton<String>(
-                    hint: Text("Selecciona un banco"),
+  context: context,
+  builder: (BuildContext context) {
+    return StatefulBuilder(
+      builder: (context, setDialogState) {
+        return AlertDialog(
+          title: const Text("Asignar Factura a Banco"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Banco seleccionado en un DropdownButton que ocupa todo el ancho
+                SizedBox(
+                  width: double.infinity,
+                  child: DropdownButton<String>(
+                    isExpanded: true, // Hace que el DropdownButton ocupe todo el ancho
+                    hint: const Text("Selecciona un banco"),
                     value: selectedBank,
                     onChanged: (String? newValue) {
                       setDialogState(() {
@@ -63,50 +80,131 @@ class _BoletasLibresViewState extends State<BoletasLibresView> {
                       );
                     }).toList(),
                   ),
-                  if (selectedBank != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text("Banco seleccionado: $selectedBank"),
-                    ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("Cancelar"),
                 ),
-                TextButton(
-                  onPressed: () async {
-                    if (selectedBank != null) {
-                      try {
-                        await apiService.asignarBoleta(facturaId, selectedBank!);
-                        setState(() {
-                          facturas.removeWhere((factura) => factura['boleta_id'] == facturaId);
-                        });
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Factura asignada a $selectedBank")),
-                        );
-                      } catch (e) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Error al asignar factura: $e")),
-                        );
-                      }
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Selecciona un banco")),
-                      );
-                    }
-                  },
-                  child: Text("Asignar"),
+                const SizedBox(height: 10),
+
+                // Primera fila con "Tasa" y "Días Tasa"
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          labelText: "Tasa",
+                          suffixText: "%",
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          tasaCompensatoria = double.tryParse(value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: DropdownButton<int>(
+                        isExpanded: true,
+                        hint: const Text("Días Tasa"),
+                        value: diasTasa,
+                        onChanged: (int? newValue) {
+                          setDialogState(() {
+                            diasTasa = newValue;
+                          });
+                        },
+                        items: diasTasaItems.entries.map((entry) {
+                          return DropdownMenuItem<int>(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Segunda fila con "Tipo de Tasa" y "Capitalización" (condicional)
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        hint: const Text("Tipo de Tasa"),
+                        value: tipoTasa,
+                        onChanged: (String? newValue) {
+                          setDialogState(() {
+                            tipoTasa = newValue;
+                          });
+                        },
+                        items: ["Efectiva", "Nominal"].map((String type) {
+                          return DropdownMenuItem<String>(
+                            value: type,
+                            child: Text(type),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    if (tipoTasa == "Nominal")
+                      Expanded(
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            labelText: "Capitalización",
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            capitalizacion = int.tryParse(value);
+                          },
+                        ),
+                      ),
+                  ],
                 ),
               ],
-            );
-          },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar"),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (selectedBank != null && tasaCompensatoria != null && diasTasa != null && tipoTasa != null) {
+                  try {
+                    await apiService.asignarBoleta({
+                      "boleta_id": facturaId,
+                      "banco_id": selectedBank!,
+                      "tasa_compensatoria": tasaCompensatoria! / 100,
+                      "dias_tasa": diasTasa,
+                      "tipo_tasa": tipoTasa!.toUpperCase(),
+                      "dias_capitalizacion": tipoTasa == "Nominal" ? capitalizacion : null,
+                    });
+                    setState(() {
+                      facturas.removeWhere((factura) => factura['boleta_id'] == facturaId);
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Factura asignada a $selectedBank")),
+                    );
+                  } catch (e) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error al asignar factura: $e")),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Completa todos los campos")),
+                  );
+                }
+              },
+              child: const Text("Asignar"),
+            ),
+          ],
         );
       },
     );
+  },
+);
+    
   }
 
   Future<void> crearFactura() async {
