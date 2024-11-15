@@ -26,9 +26,12 @@ class _ConsolidadoMonedaViewState extends State<ConsolidadoMonedaView> {
   bool showConsolidado = false;
   Map<String, dynamic>? consolidadoData;
 
+  String selectedMoneda = "PEN";
+
   @override
   void initState() {
     super.initState();
+    selectedMoneda = widget.tipoMoneda;
     _fetchConsolidado();
   }
 
@@ -89,10 +92,39 @@ class _ConsolidadoMonedaViewState extends State<ConsolidadoMonedaView> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         Text(
-          'Tipo de Moneda: $tipoMoneda',
+          'Moneda de cartera: $tipoMoneda',
           style: TextStyle(fontSize: 16),
         ),
+        
+        ToggleButtons(
+          borderRadius: BorderRadius.circular(5),
+          constraints: BoxConstraints(maxHeight: 30, minHeight: 30),
+          isSelected: [selectedMoneda == "PEN", selectedMoneda == "USD"],
+          onPressed: (index) {
+            setState(() {
+              selectedMoneda = index == 0 ? "PEN" : "USD";
+            });
+          },
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text("PEN"),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text("USD"),
+            ),
+          ],
+        ),
+        
         Text(
+          selectedMoneda == "PEN"
+              ? 'Monto Total: ${montoTotalEnPen.toStringAsFixed(2)} PEN'
+              : 'Monto Total: ${montoTotal.toStringAsFixed(2)} USD',
+          style: TextStyle(fontSize: 16),
+        ),
+        
+        /*Text(
           'Monto Total (Valor Recibido): ${montoTotal.toStringAsFixed(2)} $tipoMoneda',
           style: TextStyle(fontSize: 16),
         ),
@@ -100,7 +132,7 @@ class _ConsolidadoMonedaViewState extends State<ConsolidadoMonedaView> {
           Text(
             'Monto Total en PEN: ${montoTotalEnPen.toStringAsFixed(2)} PEN',
             style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-          ),
+          ),*/
         Text(
           'TCEA Cartera: ${tceaCartera.toStringAsFixed(2)}%',
           style: TextStyle(fontSize: 16),
